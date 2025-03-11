@@ -1,4 +1,7 @@
+import codecs
+import io
 import os
+import sys
 
 import discord
 from discord import app_commands
@@ -50,19 +53,33 @@ async def hello(interaction: discord.Interaction, sendtext: str = "by discord.py
 
 
 @tree.command(
+    name="send_txt",
+    description="テキストファイルを送信する",
+)
+async def send_txt(interaction: discord.Interaction):
+    sendtext = "aaaaaaaaaa\nbbbbbbbbbb\ncccccccccc"
+
+    sys.stdout = codecs.getwriter("utf_8")(sys.stdout)
+    with io.StringIO(sendtext) as f:
+        await interaction.channel.send(file=discord.File(f, "send.txt"))
+
+
+@tree.command(
     name="ranking",
     description="サーバーが属するグループのギルドランキングを表示",
 )
 async def ranking(
-    interaction: discord.Interaction, world_number: int, server: str = "jp"
+    interaction: discord.Interaction,
+    world_number: int,
+    server: str = "jp",
+    length: int = 50,
 ):
     world_id = SERVERs[server] + world_number
-    # print(world_id, server, world_number)
-    sbody = guild_ranking.output_bp_ranking(world_id, length=10)
+    sbody = guild_ranking.output_bp_ranking(world_id, length=length)
 
-    # sbody = str(world_number) + server
-
-    await interaction.response.send_message(sbody)
+    sys.stdout = codecs.getwriter("utf_8")(sys.stdout)
+    with io.StringIO(sbody) as f:
+        await interaction.channel.send(file=discord.File(f, "guild_ranking.txt"))
 
 
 # ボットを起動
