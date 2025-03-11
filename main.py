@@ -58,7 +58,7 @@ async def ranking(
 ):
     world_id = SERVERs[server] + world_number
     # print(world_id, server, world_number)
-    sbody = guild_ranking.get_sorted_bp(world_id)
+    sbody = guild_ranking.output_bp_ranking(world_id, length=10)
 
     # sbody = str(world_number) + server
 

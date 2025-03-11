@@ -1,10 +1,11 @@
 from datetime import datetime
 from pathlib import Path
 
+import cnum
 import requests
 
 
-def get_wgroup(world_id):
+def get_wgroup(world_id: int):
     """world_id(swww)が与えられた時、同じグループに属すすべてのworld_idを返す
 
     Args:
@@ -22,9 +23,11 @@ def get_wgroup(world_id):
         if world_id in group_data["worlds"]:
             return group_data["worlds"]
 
+    return None
 
-def get_guildranking(world_id):
-    """与えられたワールドのギルドランキングを入手する
+
+def get_guildranking(world_id: int) -> list:
+    """与えられたワールドのguild rankingを入手する
 
     Args:
         world_id (int): swww
@@ -36,13 +39,38 @@ def get_guildranking(world_id):
     response = requests.get(url)
     data = response.json()["data"]
 
-    bp = data["rankings"]["bp"]
-
-    return bp
+    return data
 
 
-def get_group_guildranking(world_id):
-    """world_idが属するグループのすべてのギルドランキングを結合する
+def get_bp20_guild_ranking(data: list) -> list:
+    """guild rankinから戦闘力top20のrankingを取得する
+
+    Args:
+        data (list): guild ranking
+
+    Returns:
+        list: 戦闘力top20のguild ranking
+    """
+
+    # 戦闘力top20のguild_idをランキング順に取得
+    bp20_guild_id = [data["rankings"]["bp"][i]["id"] for i in range(20)]
+
+    bp20_guild_info = []
+    for i in range(20):
+        bp20_guild_info.append(data["guild_info"][str(bp20_guild_id[i])])
+
+        # guild_infoにはworld_idが含まれていないので追加
+        bp20_guild_info[i]["world_id"] = data["world_id"]
+
+    # outputfile_path = Path(__file__).resolve().parent.joinpath("output.json")
+    # with open(outputfile_path, "w", encoding="utf-8") as outputfile:
+    #     json.dump(bp20_guild_info, outputfile, ensure_ascii=False)
+
+    return bp20_guild_info
+
+
+def get_group_bp_guild_ranking(world_id):
+    """world_idが属するグループのすべてのギルドランキングを統合する
 
     Args:
         world_id (int): world_id
@@ -50,43 +78,48 @@ def get_group_guildranking(world_id):
     Returns:
         list: グループのギルドランキング
     """
-    bp_group = []
-    # for around_world_id in [1097, 1099, 1106, 1108]:
+    group_bp_ranking = []
     for around_world_id in get_wgroup(world_id):
-        bp_world = get_guildranking(around_world_id)
+        data = get_guildranking(around_world_id)
+        group_bp_ranking += get_bp20_guild_ranking(data)
 
-        # world_idの情報を追記
-        for i in range(len(bp_world)):
-            bp_world[i]["world_id"] = around_world_id
+    group_bp_ranking.sort(key=lambda x: x["bp"], reverse=True)
 
-        bp_group += bp_world
-
-    sorted_group_guildranking = sorted(bp_group, key=lambda x: x["bp"], reverse=True)
-
-    return sorted_group_guildranking
+    return group_bp_ranking
 
 
-def get_sorted_bp(sorted_bp, output=False):
+def output_bp_ranking(world_id, length=50, is_export=False, export_path=None) -> str:
     """group_guildrankingに関するdataを人間にわかりやすいよう整形する
 
     Args:
-        sorted_bp (dictionary): data
+        bp_ranking (dictionary): data
     """
+    bp_ranking = get_group_bp_guild_ranking(world_id)
+
     sbody = ""
     sbody += datetime.now().isoformat(timespec="seconds") + "\n"
-    sbody += "順位,\tworld_id,\tギルド名,\tギルド戦闘力\n"
-    for index, guild in enumerate(sorted_bp):
+    sbody += "順位,\tworld_id,\tギルド名\n"
+    for index, guild_info in enumerate(bp_ranking):
         if index == 16 or index == 32 or index == 48:
             sbody += "----\n"
-        sbody += f'{str(index + 1):>3}位,\t{int(str(guild["world_id"])[1:]):>3},\t{guild["name"]},\t{guild["bp"]}\n'
 
-    # outputfile_path = Path(__file__).resolve().parent.joinpath("output.txt")
-    # outputfile = open(outputfile_path, "w", encoding="utf-8")
-    # outputfile.write(sbody)
-    # outputfile.close
+        # sbody += f"{guild_info["name"]}\n"
+        sbody += (
+            f'{str(index + 1):>3}位,\t{guild_info["name"]}\n'
+            + f'    (w{str(guild_info["world_id"])[1:]}, guild_id: {guild_info["id"]}), \t'
+            + f'{guild_info["num_members"]}人, \t'
+            + f'bp: {cnum.jp(guild_info["bp"])}\n'
+        )
 
-    if output:
-        outputfile_path = Path(__file__).resolve().parent.joinpath("output.txt")
+        if index == length - 1:
+            break
+
+    if is_export:
+        if export_path is None:
+            outputfile_path = Path(__file__).resolve().parent.joinpath("output.txt")
+        else:
+            outputfile_path = Path(export_path)
+
         with open(outputfile_path, "w", encoding="utf-8") as outputfile:
             outputfile.write(sbody)
 
@@ -94,7 +127,5 @@ def get_sorted_bp(sorted_bp, output=False):
 
 
 if __name__ == "__main__":
-    data = get_group_guildranking(1099)
-
-    sbody = get_sorted_bp(data)
-    print(sbody)
+    world_id = 1099
+    output_bp_ranking(1099, is_export=True)
