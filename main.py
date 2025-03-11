@@ -77,9 +77,17 @@ async def ranking(
     world_id = SERVERs[server] + world_number
     sbody = guild_ranking.output_bp_ranking(world_id, length=length)
 
-    sys.stdout = codecs.getwriter("utf_8")(sys.stdout)
-    with io.StringIO(sbody) as f:
-        await interaction.channel.send(file=discord.File(f, "guild_ranking.txt"))
+    # await interaction.response.send_message(
+    #     f"jpサーバーのw{world_number}が所属するグループにおけるギルドランキング"
+    # )
+
+    await interaction.response.send_message(sbody)
+
+    # sys.stdout = codecs.getwriter("utf_8")(sys.stdout)
+    # with io.StringIO(sbody) as f:
+    #     await interaction.channel.send(
+    #         file=discord.File(f, "guild_ranking.txt"),
+    #     )
 
 
 # ボットを起動

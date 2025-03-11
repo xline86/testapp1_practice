@@ -16,8 +16,13 @@ def get_wgroup(world_id: int):
         例: [1099, 1103, 1107, 1111]
     """
     url = "https://api.mentemori.icu/wgroups"
-    response = requests.get(url)
-    data = response.json()["data"]
+    response = requests.get(url).json()
+
+    if response["status"] != 200:
+        print("API Error: get_wgroup")
+        return None
+
+    data = response["data"]
 
     for group_data in data:
         if world_id in group_data["worlds"]:
@@ -100,6 +105,9 @@ def output_bp_ranking(world_id, length=50, is_export=False, export_path=None) ->
     sbody += datetime.now().isoformat(timespec="seconds") + "\n"
     sbody += "順位,\tworld_id,\tギルド名\n"
     for index, guild_info in enumerate(bp_ranking):
+        if index == length:
+            break
+
         if index == 16 or index == 32 or index == 48:
             sbody += "----\n"
 
@@ -110,9 +118,6 @@ def output_bp_ranking(world_id, length=50, is_export=False, export_path=None) ->
             + f'{guild_info["num_members"]}人, \t'
             + f'bp: {cnum.jp(guild_info["bp"])}\n'
         )
-
-        if index == length - 1:
-            break
 
     if is_export:
         if export_path is None:
@@ -128,4 +133,4 @@ def output_bp_ranking(world_id, length=50, is_export=False, export_path=None) ->
 
 if __name__ == "__main__":
     world_id = 1099
-    output_bp_ranking(1099, is_export=True)
+    output_bp_ranking(1099, is_export=True, length=16)
