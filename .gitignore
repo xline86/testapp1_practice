@@ -1,0 +1,9 @@
+# folders
+/bot_examples/
+
+# files
+**/__pycache__/**
+/.env
+/test.py
+/mememori_tool/output.*
+/作業メモ.md
