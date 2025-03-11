@@ -4,7 +4,6 @@ import os
 import sys
 
 import discord
-from discord import app_commands
 from dotenv import load_dotenv
 
 from mememori_tool import guild_ranking
@@ -19,7 +18,7 @@ TOKEN = os.getenv("TOKEN")
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 
-tree = app_commands.CommandTree(client)
+tree = discord.app_commands.CommandTree(client)
 
 SERVERs = {
     "jp": 1000,
