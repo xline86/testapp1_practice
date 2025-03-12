@@ -147,8 +147,8 @@ def get_guild_name(guild_info, guild_id):
 
 
 if __name__ == "__main__":
-    world_id = 1099
-    guild_id = 196765134099
+    world_id = 1097
+    guild_id = 185183306097
     (bpranking, player_info) = get_playerbpranking_and_playerinfo(world_id)
     guild_info = get_guildinfo(world_id)
 

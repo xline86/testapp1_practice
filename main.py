@@ -6,7 +6,7 @@ import sys
 import discord
 from dotenv import load_dotenv
 
-from mememori_tool import guild_ranking
+from mememori_tool import mentemorimori_tool
 
 # .envファイルを読み込む
 load_dotenv()
@@ -74,19 +74,19 @@ async def ranking(
     length: int = 50,
 ):
     world_id = SERVERs[server] + world_number
-    sbody = guild_ranking.output_bp_ranking(world_id, length=length)
+    sbody = mentemorimori_tool.output_bp_ranking(world_id, length=length)
 
-    # await interaction.response.send_message(
-    #     f"jpサーバーのw{world_number}が所属するグループにおけるギルドランキング"
-    # )
+    await interaction.response.send_message(
+        f"jpサーバーのw{world_number}が所属するグループにおけるギルドランキングを送信します"
+    )
 
-    await interaction.response.send_message(sbody)
+    # await interaction.response.send_message(sbody)
 
-    # sys.stdout = codecs.getwriter("utf_8")(sys.stdout)
-    # with io.StringIO(sbody) as f:
-    #     await interaction.channel.send(
-    #         file=discord.File(f, "guild_ranking.txt"),
-    #     )
+    sys.stdout = codecs.getwriter("utf_8")(sys.stdout)
+    with io.StringIO(sbody) as f:
+        await interaction.channel.send(
+            file=discord.File(f, "guild_ranking.txt"),
+        )
 
 
 # ボットを起動

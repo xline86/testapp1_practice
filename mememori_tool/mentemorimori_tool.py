@@ -6,7 +6,7 @@ import cnum
 import requests
 
 
-def get_wgroup(world_id: int):
+def get_group_info_contain_given_world_id(world_id: int):
     """world_id(swww)が与えられた時、同じグループに属すすべてのworld_idを返す
 
     Args:
@@ -19,17 +19,11 @@ def get_wgroup(world_id: int):
     url = "https://api.mentemori.icu/wgroups"
     response = requests.get(url).json()
 
-    if response["status"] != 200:
-        print("API Error: get_wgroup")
-        return None
-
     data = response["data"]
 
     for group_data in data:
         if world_id in group_data["worlds"]:
-            return group_data["worlds"]
-
-    return None
+            return group_data
 
 
 def get_bp50_player_ranking(world_id: int, is_export=False) -> list:
@@ -98,32 +92,38 @@ def get_group_bp_guild_ranking(world_id):
     Returns:
         list: グループのギルドランキング
     """
-    group_bp_ranking = []
-    for around_world_id in get_wgroup(world_id):
-        group_bp_ranking += get_bp20_guild_ranking(around_world_id)
+    group_bp_ranking = {}
+    group_info = get_group_info_contain_given_world_id(world_id)
 
-    group_bp_ranking.sort(key=lambda x: x["bp"], reverse=True)
+    group_bp_ranking["group_id"] = group_info["group_id"]
+    group_bp_ranking["ranking"] = []
+
+    for around_world_id in group_info["worlds"]:
+        group_bp_ranking["ranking"] += get_bp20_guild_ranking(around_world_id)
+
+    group_bp_ranking["ranking"].sort(key=lambda x: x["bp"], reverse=True)
 
     return group_bp_ranking
 
 
-def output_bp_ranking(world_id, length=50, is_export=False, export_path=None) -> str:
+def output_bp_ranking(world_id, length=50, is_export=False, export_path=None):
     """group_guildrankingに関するdataを人間にわかりやすいよう整形する
 
     Args:
         bp_ranking (dictionary): data
     """
-    bp_ranking = get_group_bp_guild_ranking(world_id)
+    group_bp_guild_ranking = get_group_bp_guild_ranking(world_id)
+    ranking = group_bp_guild_ranking["ranking"]
 
     sbody = ""
-    sbody += datetime.now().isoformat(timespec="seconds") + "\n"
-    sbody += "順位,\tworld_id,\tギルド名\n"
-    for index, guild_info in enumerate(bp_ranking):
+    sbody += (
+        datetime.now().isoformat(timespec="seconds")
+        + "\n"
+        + f'group_id: {group_bp_guild_ranking["group_id"]} におけるギルドランク\n'
+    )
+    for index, guild_info in enumerate(ranking):
         if index == length:
             break
-
-        if index == 16 or index == 32 or index == 48:
-            sbody += "----\n"
 
         # sbody += f"{guild_info["name"]}\n"
         sbody += (
@@ -177,15 +177,48 @@ def get_guild_info_detail(world_id, guild_id):
     return guild_info_detail
 
 
+def output_guild_info_detail(world_id, guild_id, is_export=False):
+    guild_info_detail = get_guild_info_detail(world_id, guild_id)
+
+    giuild_bp = guild_info_detail["guild_info"]["bp"]
+    guild_num_members = guild_info_detail["guild_info"]["num_members"]
+    guild_avg_bp = giuild_bp // guild_num_members
+
+    sbody = (
+        "凛として時雨 の詳細情報\n"
+        + "\n"
+        + f"bp: {cnum.jp(giuild_bp)}, 人数: {cnum.jp(guild_num_members)}\n"
+        + f"平均: {cnum.jp(guild_avg_bp)}\n"
+        + "\n"
+        + "所属ランカー(戦闘力ランキング50位以内)\n"
+    )
+
+    for rank, player_info in guild_info_detail["join_ranker"].items():
+        sbody += (
+            f'順位: {rank}, {player_info["name"]}\n' + f'  bp: {player_info["bp"]}\n'
+        )
+
+    sbody += f'計: {len(guild_info_detail["join_ranker"])}人\n'
+
+    if is_export:
+        outputfile_path = Path(__file__).resolve().parent.joinpath("output.txt")
+        with open(outputfile_path, "w", encoding="utf-8") as outputfile:
+            outputfile.write(sbody)
+
+    return sbody
+
+
 if __name__ == "__main__":
     world_id = 1099
     guild_id = 494634944099
 
-    # output_bp_ranking(1099, is_export=True, length=16)
+    output_bp_ranking(world_id, is_export=True)
 
     # get_bp50_player_ranking(world_id, is_export=True)
 
-    guild_info_detail = get_guild_info_detail(world_id, guild_id)
-    outputfile_path = Path(__file__).resolve().parent.joinpath("output.json")
-    with open(outputfile_path, "w", encoding="utf-8") as outputfile:
-        json.dump(guild_info_detail, outputfile, ensure_ascii=False)
+    # guild_info_detail = get_guild_info_detail(world_id, guild_id)
+    # outputfile_path = Path(__file__).resolve().parent.joinpath("output.json")
+    # with open(outputfile_path, "w", encoding="utf-8") as outputfile:
+    #     json.dump(guild_info_detail, outputfile, ensure_ascii=False)
+
+    # output_guild_info_detail(world_id, guild_id, is_export=True)
