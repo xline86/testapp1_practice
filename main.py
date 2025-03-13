@@ -11,6 +11,7 @@ from mememori_tool import mentemorimori_tool
 # .envファイルを読み込む
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
+APP_NAME = os.getenv("APP_NAME")
 
 
 # botの設定
@@ -48,7 +49,7 @@ async def on_ready():
     description="挨拶する",
 )
 async def hello(
-    interaction: discord.Interaction, sendtext: str = "testapp1_practice より心を込めて"
+    interaction: discord.Interaction, sendtext: str = f"{APP_NAME} より心を込めて"
 ):
 
     name = interaction.user.name
