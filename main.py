@@ -47,8 +47,14 @@ async def on_ready():
     name="hello",
     description="挨拶する",
 )
-async def hello(interaction: discord.Interaction, sendtext: str = "by discord.py"):
-    await interaction.response.send_message("hello world, " + str(sendtext))
+async def hello(
+    interaction: discord.Interaction, sendtext: str = "testapp1_practice より心を込めて"
+):
+
+    name = interaction.user.name
+    await interaction.response.send_message(
+        f"{name} さん, こんにちは\n" + str(sendtext)
+    )
 
 
 @tree.command(
@@ -56,7 +62,7 @@ async def hello(interaction: discord.Interaction, sendtext: str = "by discord.py
     description="テキストファイルを送信する",
 )
 async def send_txt(interaction: discord.Interaction):
-    sendtext = "aaaaaaaaaa\nbbbbbbbbbb\ncccccccccc"
+    sendtext = "これはテストです。\nテキストファイルを送信できることを確かめるために作成されました。"
 
     sys.stdout = codecs.getwriter("utf_8")(sys.stdout)
     with io.StringIO(sendtext) as f:
@@ -71,22 +77,49 @@ async def ranking(
     interaction: discord.Interaction,
     world_number: int,
     server: str = "jp",
-    length: int = 50,
+    length: int = 16,
 ):
     world_id = SERVERs[server] + world_number
     sbody = mentemorimori_tool.output_bp_ranking(world_id, length=length)
 
-    await interaction.response.send_message(
-        f"jpサーバーのw{world_number}が所属するグループにおけるギルドランキングを送信します"
-    )
+    sbody_split = sbody.splitlines()
+    output = []
 
-    # await interaction.response.send_message(sbody)
+    if length <= 16:
+        output.append("----\n" + "\n".join(sbody_split))
+    elif 17 < length and length <= 32:
+        output.append("----\n" + "\n".join(sbody_split[:34]))
+        output.append("----\n" + "\n".join(sbody_split[34:]))
+    elif 32 < length and length <= 48:
+        output.append("----\n" + "\n".join(sbody_split[:34]))
+        output.append("----\n" + "\n".join(sbody_split[34:66]))
+        output.append("----\n" + "\n".join(sbody_split[67:]))
+    else:
+        output.append("----\n" + "\n".join(sbody_split[:34]))
+        output.append("----\n" + "\n".join(sbody_split[34:66]))
+        output.append("----\n" + "\n".join(sbody_split[67:98]))
+        output.append("----\n" + "\n".join(sbody_split[98:]))
 
-    sys.stdout = codecs.getwriter("utf_8")(sys.stdout)
-    with io.StringIO(sbody) as f:
-        await interaction.channel.send(
-            file=discord.File(f, "guild_ranking.txt"),
-        )
+    await interaction.response.send_message(output[0])
+    if len(output) > 1:
+        for i in output[1:]:
+            await interaction.channel.send(i)
+
+
+@tree.command(
+    name="guildinfo",
+    description="ギルドの詳細情報を表示",
+)
+async def guildinfo(
+    interaction: discord.Interaction,
+    world_number: int,
+    guild_id: int,
+    server: str = "jp",
+):
+    world_id = SERVERs[server] + world_number
+    sbody = mentemorimori_tool.output_guild_info_detail(world_id, guild_id)
+
+    await interaction.response.send_message(sbody)
 
 
 # ボットを起動

@@ -195,7 +195,8 @@ def output_guild_info_detail(world_id, guild_id, is_export=False):
 
     for rank, player_info in guild_info_detail["join_ranker"].items():
         sbody += (
-            f'順位: {rank}, {player_info["name"]}\n' + f'  bp: {player_info["bp"]}\n'
+            f'順位: {rank}, \t{player_info["name"]}, '
+            + f'\tbp: {cnum.jp(player_info["bp"])}\n'
         )
 
     sbody += f'計: {len(guild_info_detail["join_ranker"])}人\n'
