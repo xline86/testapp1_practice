@@ -80,31 +80,26 @@ async def ranking(
     server: str = "jp",
     length: int = 16,
 ):
+
+    await interaction.response.send_message("処理中...")
+    msg = await interaction.original_response()
+
     world_id = SERVERs[server] + world_number
-    sbody = mentemorimori_tool.output_bp_ranking(world_id, length=length)
+    sbody = mentemorimori_tool.output_bp_ranking(world_id)
+    # print(sbody)
 
     sbody_split = sbody.splitlines()
+
     output = []
+    output.append("\n".join(sbody_split[: 2 + 16 * 2]))
+    # print(output[0])
+    await msg.edit(content=output[0])
 
-    if length <= 16:
-        output.append("----\n" + "\n".join(sbody_split))
-    elif 17 < length and length <= 32:
-        output.append("----\n" + "\n".join(sbody_split[:34]))
-        output.append("----\n" + "\n".join(sbody_split[34:]))
-    elif 32 < length and length <= 48:
-        output.append("----\n" + "\n".join(sbody_split[:34]))
-        output.append("----\n" + "\n".join(sbody_split[34:66]))
-        output.append("----\n" + "\n".join(sbody_split[67:]))
-    else:
-        output.append("----\n" + "\n".join(sbody_split[:34]))
-        output.append("----\n" + "\n".join(sbody_split[34:66]))
-        output.append("----\n" + "\n".join(sbody_split[67:98]))
-        output.append("----\n" + "\n".join(sbody_split[98:]))
-
-    await interaction.response.send_message(output[0])
-    if len(output) > 1:
-        for i in output[1:]:
-            await interaction.channel.send(i)
+    for i in range(1, 4):
+        if 16 * i < length:
+            output.append("\n".join(sbody_split[2 + 16 * 2 * i : 2 + 16 * 2 * (i + 1)]))
+            # print(output[i])
+            await interaction.channel.send(output[i])
 
 
 @tree.command(
@@ -121,6 +116,25 @@ async def guildinfo(
     sbody = mentemorimori_tool.output_guild_info_detail(world_id, guild_id)
 
     await interaction.response.send_message(sbody)
+
+
+@tree.command(
+    name="reload",
+    description="プログラムを読み込み直す",
+)
+async def reload(interaction: discord.Interaction):
+
+    await interaction.response.send_message("reload")
+    # reload(mentemorimori_tool)
+
+
+@tree.command(name="sync_reload", description="スラッシュコマンドを手動で同期します")
+async def sync_reload(interaction: discord.Interaction):
+    await interaction.response.send_message("同期中...", ephemeral=True)
+    msg = await interaction.original_response()
+
+    synced = await tree.sync()
+    await msg.edit(content=f"{len(synced)} 個のスラッシュコマンドを同期しました")
 
 
 # ボットを起動

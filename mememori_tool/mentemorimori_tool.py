@@ -180,14 +180,15 @@ def get_guild_info_detail(world_id, guild_id):
 def output_guild_info_detail(world_id, guild_id, is_export=False):
     guild_info_detail = get_guild_info_detail(world_id, guild_id)
 
+    guild_name = guild_info_detail["guild_info"]["name"]
     giuild_bp = guild_info_detail["guild_info"]["bp"]
     guild_num_members = guild_info_detail["guild_info"]["num_members"]
     guild_avg_bp = giuild_bp // guild_num_members
 
     sbody = (
-        "凛として時雨 の詳細情報\n"
+        f"{guild_name} の詳細情報\n"
         + "\n"
-        + f"bp: {cnum.jp(giuild_bp)}, 人数: {cnum.jp(guild_num_members)}\n"
+        + f"w{int(str(world_id)[1:])}, bp: {cnum.jp(giuild_bp)}, 人数: {cnum.jp(guild_num_members)}\n"
         + f"平均: {cnum.jp(guild_avg_bp)}\n"
         + "\n"
         + "所属ランカー(戦闘力ランキング50位以内)\n"
