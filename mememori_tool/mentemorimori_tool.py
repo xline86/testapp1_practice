@@ -96,6 +96,7 @@ def get_group_bp_guild_ranking(world_id):
     group_info = get_group_info_contain_given_world_id(world_id)
 
     group_bp_ranking["group_id"] = group_info["group_id"]
+    group_bp_ranking["worlds"] = group_info["worlds"]
     group_bp_ranking["ranking"] = []
 
     for around_world_id in group_info["worlds"]:
@@ -114,18 +115,21 @@ def output_bp_ranking(world_id, length=50, is_export=False, export_path=None):
     """
     group_bp_guild_ranking = get_group_bp_guild_ranking(world_id)
     ranking = group_bp_guild_ranking["ranking"]
+    worlds_list = group_bp_guild_ranking["worlds"]
+    worlds_str = ""
+    for world_id in worlds_list:
+        worlds_str += f"w{int(str(world_id)[1:])} "
 
     sbody = ""
     sbody += (
         datetime.now().isoformat(timespec="seconds")
         + "\n"
-        + f'group_id: {group_bp_guild_ranking["group_id"]} におけるギルドランク\n'
+        + f'group_id: {group_bp_guild_ranking["group_id"]} ({worlds_str})におけるギルドランク\n'
     )
     for index, guild_info in enumerate(ranking):
         if index == length:
             break
 
-        # sbody += f"{guild_info["name"]}\n"
         sbody += (
             f'{str(index + 1):>3}位,\t{guild_info["name"]}\n'
             + f'    (w{str(guild_info["world_id"])[1:]}, guild_id: {guild_info["id"]}), \t'
@@ -141,6 +145,13 @@ def output_bp_ranking(world_id, length=50, is_export=False, export_path=None):
 
         with open(outputfile_path, "w", encoding="utf-8") as outputfile:
             outputfile.write(sbody)
+
+        # if export_path is None:
+        #     outputfile_path = Path(__file__).resolve().parent.joinpath("output.json")
+        # else:
+        #     outputfile_path = Path(export_path)
+        # with open(outputfile_path, "w", encoding="utf-8") as outputfile:
+        #     json.dump(group_bp_guild_ranking, outputfile, ensure_ascii=False)
 
     return sbody
 
@@ -214,7 +225,7 @@ if __name__ == "__main__":
     world_id = 1099
     guild_id = 494634944099
 
-    output_bp_ranking(world_id, is_export=True)
+    output_bp_ranking(world_id, length=50, is_export=True)
 
     # get_bp50_player_ranking(world_id, is_export=True)
 
