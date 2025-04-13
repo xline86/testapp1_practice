@@ -54,7 +54,7 @@ async def hello(
 
     name = interaction.user.name
     await interaction.response.send_message(
-        f"{name} さん, こんにちは\n" + str(sendtext)
+        f"{name} さん, こんにちは AAAAA\n" + str(sendtext)
     )
 
 
@@ -116,16 +116,6 @@ async def guildinfo(
     sbody = mentemorimori_tool.output_guild_info_detail(world_id, guild_id)
 
     await interaction.response.send_message(sbody)
-
-
-@tree.command(
-    name="reload",
-    description="プログラムを読み込み直す",
-)
-async def reload(interaction: discord.Interaction):
-
-    await interaction.response.send_message("reload")
-    # reload(mentemorimori_tool)
 
 
 @tree.command(name="sync_reload", description="スラッシュコマンドを手動で同期します")
