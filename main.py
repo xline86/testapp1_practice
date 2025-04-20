@@ -98,6 +98,10 @@ async def ranking(
     name="guildinfo",
     description="ギルドの詳細情報を表示",
 )
+@app_commands.describe(
+    world_number="w99なら99のように入力してください",
+    guild_id="/rankingコマンドを見てguild_idを入力してください",
+)
 async def guildinfo(
     interaction: discord.Interaction,
     world_number: int,
