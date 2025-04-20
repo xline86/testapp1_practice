@@ -6,5 +6,6 @@
 /.env
 /test.py
 /mememori_tool/output.*
+output.*
 /作業メモ.md
 /run_discordbot.sh
