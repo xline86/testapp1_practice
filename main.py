@@ -2,6 +2,8 @@ import codecs
 import io
 import os
 import sys
+from datetime import datetime
+import cnum
 
 import discord
 from discord import app_commands
@@ -40,11 +42,11 @@ SERVER = {
     "global": 6000,
 }
 
-GVG_CLASSE_NAME = {
-    1: "グランドマスター",
-    2: "エキスパート",
-    3: "エリート",
-    4: "other",
+GVG_CLASSES = {
+    1: {"name": "グランドマスター", "range": range(0, 16)},
+    2: {"name": "エキスパート", "range": range(16, 32)},
+    3: {"name": "エリート", "range": range(32, 48)},
+    4: {"name": "other", "range": range(48, 64)},
 }
 
 
@@ -82,16 +84,32 @@ async def ranking(
     msg = await interaction.original_response()
 
     world_id = SERVER[server] + world_number
-    sbody = mentemorimori_tool.output_bp_ranking(world_id, length=16 * gvg_class.value)
+    group_bp_guild_ranking = mentemorimori_tool.get_group_bp_guild_ranking(world_id)
 
-    sbody_split = sbody.splitlines()
+    # 整形
+    ranking: list[dict] = group_bp_guild_ranking["ranking"]
+    worlds_list = group_bp_guild_ranking["worlds"]
+    worlds_str = ""
+    for world_id in worlds_list:
+        worlds_str += f"w{int(str(world_id)[1:])} "
 
-    output = sbody_split[0] + "\n" + sbody_split[1] + f"({gvg_class.name})\n"
-    output += "\n".join(
-        sbody_split[2 + 16 * 2 * (gvg_class.value - 1) : 2 + 16 * 2 * gvg_class.value]
+    sbody = ""
+    sbody += (
+        f'group_id: {group_bp_guild_ranking["group_id"]} ({worlds_str})におけるギルドランキング\n'
+        + gvg_class.name
+        + "クラス\n"
     )
+    for i in GVG_CLASSES[gvg_class.value]["range"]:
+        guild_info = ranking[i]
+        sbody += (
+            f'{str(i + 1):>3}位,\t{guild_info["name"]}\n'
+            + f'-#    (w{str(guild_info["world_id"])[1:]}, guild_id: {guild_info["id"]}), \t'
+            + f'{guild_info["num_members"]}人, \t'
+            + f'bp: {cnum.jp(guild_info["bp"])}\n'
+        )
 
-    await msg.edit(content=output)
+    sbody += "-# " + datetime.now().isoformat(timespec="seconds") + "\n"
+    await msg.edit(content=sbody)
 
 
 @tree.command(
