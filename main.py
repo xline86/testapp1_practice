@@ -2,43 +2,33 @@ import codecs
 import io
 import os
 import sys
+
 from datetime import datetime
-import cnum
 
 import discord
 from discord import app_commands
 from dotenv import load_dotenv
 
+import cnum
 from mememori_tool import mentemorimori_tool
 
-# .envファイルを読み込む
+# === 環境変数読み込み ===
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 APP_NAME = os.getenv("APP_NAME")
 
-
-# botの設定
-# intentsは、botにどのような権限を渡すかを設定するもの。defaultはすべてtrue
+# === Discord クライアント設定 ===
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
-
 tree = discord.app_commands.CommandTree(client)
 
-SERVER = {
+# === 定数定義 ===
+SERVER_OFFSET = {
     "jp": 1000,
-    "Japan": 1000,
-    "japan": 1000,
     "kr": 2000,
-    "Korea": 2000,
-    "korea": 2000,
-    "Asia": 3000,
     "asia": 3000,
     "na": 5000,
-    "NorthAmerica": 5000,
-    "northamerica": 5000,
-    "Europe": 5000,
     "europe": 5000,
-    "Global": 6000,
     "global": 6000,
 }
 
@@ -50,27 +40,59 @@ GVG_CLASSES = {
 }
 
 
+# === イベント: 起動時 ===
 @client.event
 async def on_ready():
     print(f"ログインしました: {client.user}")
-    await tree.sync()  # スラッシュコマンドを同期
+    await tree.sync()
 
 
+# === ユーティリティ関数 ===
+def resolve_world_id(server: str, world_number: int) -> int:
+    key = server.lower()
+    if key not in SERVER_OFFSET:
+        raise ValueError(f"不正なサーバー名です: {server}")
+    return SERVER_OFFSET[key] + world_number
+
+
+def format_guild_ranking(ranking_data: dict, gvg_class_id: int) -> str:
+    ranking_list = ranking_data["ranking"]
+    world_ids = ranking_data["worlds"]
+    group_id = ranking_data["group_id"]
+    gvg_class_info = GVG_CLASSES[gvg_class_id]
+
+    worlds_str = " ".join([f"w{str(world_id)[1:]}" for world_id in world_ids])
+    header = f"group_id: {group_id} ({worlds_str}) におけるギルドランキング\n{gvg_class_info['name']} クラス\n"
+
+    lines = [header]
+    for i in gvg_class_info["range"]:
+        if i >= len(ranking_list):
+            break
+        guild = ranking_list[i]
+        world_suffix = str(guild["world_id"])[1:]
+        lines.append(
+            f'{i + 1:>3}位,\t{guild["name"]}\n'
+            f'-#    (w{world_suffix}, guild_id: {guild["id"]}), \t'
+            f'{guild["num_members"]}人, \t'
+            f'bp: {cnum.jp(guild["bp"])}\n'
+        )
+
+    lines.append(f"-# {datetime.now().isoformat(timespec='seconds')}\n")
+    return "".join(lines)
+
+
+# === コマンド: /ranking ===
 @tree.command(
-    name="ranking",
-    description="サーバーが属するグループのギルドランキングを表示",
+    name="ranking", description="サーバーが属するグループのギルドランキングを表示"
 )
 @app_commands.describe(
-    world_number="w99なら99のように入力してください",
-    gvg_class="グループのクラスを選択してください",
-    server="必要ならサーバー名を入力してください(例: jp, kr, asia, na, europe, global)",
+    world_number="例: w99なら99を入力",
+    gvg_class="ギルドクラスを選択",
+    server="例: jp, kr, asia, na, europe, global",
 )
 @app_commands.choices(
     gvg_class=[
-        app_commands.Choice(name="グランドマスター", value=1),
-        app_commands.Choice(name="エキスパート", value=2),
-        app_commands.Choice(name="エリート", value=3),
-        app_commands.Choice(name="other", value=4),
+        app_commands.Choice(name=v["name"], value=k) for k, v in GVG_CLASSES.items()
     ]
 )
 async def ranking(
@@ -79,46 +101,25 @@ async def ranking(
     gvg_class: app_commands.Choice[int],
     server: str = "jp",
 ):
-
     await interaction.response.send_message("処理中...")
     msg = await interaction.original_response()
 
-    world_id = SERVER[server] + world_number
-    group_bp_guild_ranking = mentemorimori_tool.get_group_bp_guild_ranking(world_id)
+    try:
+        world_id = resolve_world_id(server, world_number)
+        data = mentemorimori_tool.get_group_bp_guild_ranking(world_id)
+        response = format_guild_ranking(data, gvg_class.value)
+    except Exception as e:
+        response = f"エラーが発生しました: {str(e)}"
 
-    # 整形
-    ranking: list[dict] = group_bp_guild_ranking["ranking"]
-    worlds_list = group_bp_guild_ranking["worlds"]
-    worlds_str = ""
-    for world_id in worlds_list:
-        worlds_str += f"w{int(str(world_id)[1:])} "
-
-    sbody = ""
-    sbody += (
-        f'group_id: {group_bp_guild_ranking["group_id"]} ({worlds_str})におけるギルドランキング\n'
-        + gvg_class.name
-        + "クラス\n"
-    )
-    for i in GVG_CLASSES[gvg_class.value]["range"]:
-        guild_info = ranking[i]
-        sbody += (
-            f'{str(i + 1):>3}位,\t{guild_info["name"]}\n'
-            + f'-#    (w{str(guild_info["world_id"])[1:]}, guild_id: {guild_info["id"]}), \t'
-            + f'{guild_info["num_members"]}人, \t'
-            + f'bp: {cnum.jp(guild_info["bp"])}\n'
-        )
-
-    sbody += "-# " + datetime.now().isoformat(timespec="seconds") + "\n"
-    await msg.edit(content=sbody)
+    await msg.edit(content=response)
 
 
-@tree.command(
-    name="guildinfo",
-    description="ギルドの詳細情報を表示",
-)
+# === コマンド: /guildinfo ===
+@tree.command(name="guildinfo", description="ギルドの詳細情報を表示")
 @app_commands.describe(
-    world_number="w99なら99のように入力してください",
-    guild_id="/rankingコマンドを見てguild_idを入力してください",
+    world_number="例: w99なら99を入力",
+    guild_id="/rankingコマンドを見て入力",
+    server="例: jp, kr, asia, na, europe, global",
 )
 async def guildinfo(
     interaction: discord.Interaction,
@@ -126,12 +127,16 @@ async def guildinfo(
     guild_id: int,
     server: str = "jp",
 ):
-    world_id = SERVER[server] + world_number
-    sbody = mentemorimori_tool.output_guild_info_detail(world_id, guild_id)
+    try:
+        world_id = resolve_world_id(server, world_number)
+        detail = mentemorimori_tool.output_guild_info_detail(world_id, guild_id)
+    except Exception as e:
+        detail = f"エラーが発生しました: {str(e)}"
 
-    await interaction.response.send_message(sbody)
+    await interaction.response.send_message(detail)
 
 
+# === コマンド: /sync_reload ===
 @tree.command(name="sync_reload", description="スラッシュコマンドを手動で同期します")
 async def sync_reload(interaction: discord.Interaction):
     await interaction.response.send_message("同期中...", ephemeral=True)
