@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 APP_NAME = os.getenv("APP_NAME")
+ENV = os.getenv("ENV", "production")
 AUTHOR_NAME = os.getenv("AUTHOR_NAME")
 AUTHOR_BELONGTO = os.getenv("AUTHOR_BELONGTO")
 
@@ -52,11 +53,13 @@ async def help_command(interaction: discord.Interaction):
         "この discord bot は、ギルドランキングやギルド情報を取得するためのコマンドを提供します。\n"
         "以下のコマンドが利用可能です:\n"
         "\n"
-        "/ranking - グループにおけるギルドランキングを表示\n"
-        "/guildinfo - 指定したワールドのギルドの詳細情報を表示\n"
-        "/help - このヘルプメッセージを表示\n"
+        "/ranking -- グループにおけるギルドランキングを表示\n"
+        "-# 使用例: `/ranking world_number:99 gvg_class:グランドマスター`\n"
+        "/guildinfo -- 指定したワールドのギルドの詳細情報を表示\n"
+        "-# 使用例: `/guildinfo world_number:99 guild_id:494634944099`\n"
+        "/help -- このヘルプメッセージを表示\n"
         "\n"
-        "情報は全て[メンテもりもり](https://mentemori.icu/)のAPIを利用して取得しています\n"
+        "情報は全て[メンテもりもり](https://mentemori.icu/)から取得しています\n"
         "コマンドが実行されるたびにメンテもりもりのAPIを呼び出すため、APIの負荷を考慮して適切に使用してください。\n"
         "\n"
         f"この discord bot は{AUTHOR_BELONGTO}の{AUTHOR_NAME}によって作成されました\n"
@@ -155,7 +158,7 @@ async def guildinfo(
     await interaction.response.send_message(detail)
 
 
-if APP_NAME == "testapp1_practice":
+if ENV == "practice":
     import practice_commands
 
     practice_commands.register_practice_commands(tree)
