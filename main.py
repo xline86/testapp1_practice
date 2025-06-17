@@ -1,28 +1,26 @@
-import codecs
-import io
 import os
-import sys
-
+import cnum
 from datetime import datetime
+from mememori_tool import mentemorimori_tool
+
 
 import discord
 from discord import app_commands
 from dotenv import load_dotenv
 
-import cnum
-from mememori_tool import mentemorimori_tool
-
-# === 環境変数読み込み ===
+# 環境変数読み込み
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 APP_NAME = os.getenv("APP_NAME")
+AUTHOR_NAME = os.getenv("AUTHOR_NAME")
+AUTHOR_BELONGTO = os.getenv("AUTHOR_BELONGTO")
 
-# === Discord クライアント設定 ===
+# Discord クライアント設定
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 tree = discord.app_commands.CommandTree(client)
 
-# === 定数定義 ===
+# 定数定義
 SERVER_OFFSET = {
     "jp": 1000,
     "kr": 2000,
@@ -40,14 +38,33 @@ GVG_CLASSES = {
 }
 
 
-# === イベント: 起動時 ===
+# イベント: 起動時
 @client.event
 async def on_ready():
     print(f"ログインしました: {client.user}")
     await tree.sync()
 
 
-# === ユーティリティ関数 ===
+# コマンド: /help
+@tree.command(name="help", description="ヘルプメッセージを表示します")
+async def help_command(interaction: discord.Interaction):
+    help_message = (
+        "この discord bot は、ギルドランキングやギルド情報を取得するためのコマンドを提供します。\n"
+        "以下のコマンドが利用可能です:\n"
+        "\n"
+        "/ranking - グループにおけるギルドランキングを表示\n"
+        "/guildinfo - 指定したワールドのギルドの詳細情報を表示\n"
+        "/help - このヘルプメッセージを表示\n"
+        "\n"
+        "情報は全て[メンテもりもり](https://mentemori.icu/)のAPIを利用して取得しています\n"
+        "コマンドが実行されるたびにメンテもりもりのAPIを呼び出すため、APIの負荷を考慮して適切に使用してください。\n"
+        "\n"
+        f"この discord bot は{AUTHOR_BELONGTO}の{AUTHOR_NAME}によって作成されました\n"
+    )
+    await interaction.response.send_message(help_message)
+
+
+# ユーティリティ関数
 def resolve_world_id(server: str, world_number: int) -> int:
     key = server.lower()
     if key not in SERVER_OFFSET:
@@ -62,7 +79,10 @@ def format_guild_ranking(ranking_data: dict, gvg_class_id: int) -> str:
     gvg_class_info = GVG_CLASSES[gvg_class_id]
 
     worlds_str = " ".join([f"w{str(world_id)[1:]}" for world_id in world_ids])
-    header = f"group_id: {group_id} ({worlds_str}) におけるギルドランキング\n{gvg_class_info['name']} クラス\n"
+    header = (
+        f"-# {datetime.now().isoformat(timespec='seconds')}\n"
+        + f"group_id: {group_id} ({worlds_str}) におけるギルドランキング\n{gvg_class_info['name']} クラス\n"
+    )
 
     lines = [header]
     for i in gvg_class_info["range"]:
@@ -77,11 +97,10 @@ def format_guild_ranking(ranking_data: dict, gvg_class_id: int) -> str:
             f'bp: {cnum.jp(guild["bp"])}\n'
         )
 
-    lines.append(f"-# {datetime.now().isoformat(timespec='seconds')}\n")
     return "".join(lines)
 
 
-# === コマンド: /ranking ===
+# コマンド: /ranking
 @tree.command(
     name="ranking", description="サーバーが属するグループのギルドランキングを表示"
 )
@@ -114,7 +133,7 @@ async def ranking(
     await msg.edit(content=response)
 
 
-# === コマンド: /guildinfo ===
+# コマンド: /guildinfo
 @tree.command(name="guildinfo", description="ギルドの詳細情報を表示")
 @app_commands.describe(
     world_number="例: w99なら99を入力",
@@ -136,67 +155,10 @@ async def guildinfo(
     await interaction.response.send_message(detail)
 
 
-# === コマンド: /sync_reload ===
-@tree.command(name="sync_reload", description="スラッシュコマンドを手動で同期します")
-async def sync_reload(interaction: discord.Interaction):
-    await interaction.response.send_message("同期中...", ephemeral=True)
-    msg = await interaction.original_response()
-
-    synced = await tree.sync()
-    await msg.edit(content=f"{len(synced)} 個のスラッシュコマンドを同期しました")
-
-
 if APP_NAME == "testapp1_practice":
+    import practice_commands
 
-    @tree.command(
-        name="send_txt",
-        description="テキストファイルを送信する",
-    )
-    async def send_txt(interaction: discord.Interaction):
-        sendtext = "これはテストです。\nテキストファイルを送信できることを確かめるために作成されました。"
-
-        sys.stdout = codecs.getwriter("utf_8")(sys.stdout)
-        with io.StringIO(sendtext) as f:
-            await interaction.channel.send(file=discord.File(f, "send.txt"))
-
-    @tree.command(
-        name="test",
-        description="テスト用コマンド",
-    )
-    @app_commands.describe(
-        text="テスト用のテキストを入力してください",
-    )
-    @app_commands.choices(
-        text=[
-            app_commands.Choice(name="テスト1", value=1),
-            app_commands.Choice(name="テスト2", value=2),
-            app_commands.Choice(name="テスト3", value=3),
-        ]
-    )
-    async def test(
-        interaction: discord.Interaction,
-        text: app_commands.Choice[int],
-        # text: app_commands.Choice[int] = app_commands.Choice(name="テスト1", value=1),
-        # text: int = 1,
-    ):
-        await interaction.response.send_message(
-            f"テスト用コマンドです\nあなたの選択: {text.name}（値: {text.value}）"
-        )
-
-        print(text, type(text))
-
-    @tree.command(
-        name="hello",
-        description="挨拶する",
-    )
-    async def hello(
-        interaction: discord.Interaction, sendtext: str = f"{APP_NAME} より心を込めて"
-    ):
-
-        name = interaction.user.name
-        await interaction.response.send_message(
-            f"{name} さん, こんにちは AAAAA\n" + str(sendtext)
-        )
+    practice_commands.register_practice_commands(tree)
 
 
 # ボットを起動
